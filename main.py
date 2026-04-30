@@ -1,10 +1,17 @@
 from flask import Flask
+from flask_cors import CORS
 from extensions import db
 from models import Movie  # Import models so SQLAlchemy "sees" the tables
 from movieService import movieService_bp
+from dotenv import load_dotenv
 
+# # Load environment variables from .env file
+load_dotenv()
+
+# Create Flash app
 def create_app():
     app = Flask(__name__)
+    CORS(app)   # unlocks the door for your frontend to communicate with the backend (allows cross-origin requests)
 
 
     # Database configuration

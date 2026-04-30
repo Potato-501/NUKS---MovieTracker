@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>CineTrack Pro</title>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <script src="https://unpkg.com/vue-router@4"></script>
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+    <div id="app">
+        <nav class="navbar">
+            <router-link title="Search" to="/">🔍 Search</router-link>
+            <router-link title="Watchlist" to="/watchlist">⏳ Watchlist</router-link>
+            <router-link title="Library" to="/library">✅ Library</router-link>
+        </nav>
+
+        <router-view></router-view>
+    </div>
+
+    <script type="text/x-template" id="search-template">
+    <div class="page">
+        <h1>Movie Search</h1>
+        <div class="search-bar">
+            <input v-model="query" @keyup.enter="search" placeholder="Search for movies...">
+            <button @click="search">Search</button>
+        </div>
+        <div class="results-grid">
+            <div v-for="movie in results" :key="movie.imdbID" class="movie-card" @click="add(movie)">
+                <strong>{{ movie.Title }}</strong> <span>({{ movie.Year }})</span>
+                <div class="actions">
+                    <button @click="add(movie, 'Watchlist')">Add to Watchlist</button>
+                    <button @click="add(movie, 'Library')">I've Seen This</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</script>
+
+    <script type="text/x-template" id="list-template">
+    <div class="page">
+        <h1>{{ title }}</h1>
+        <div v-if="movies.length === 0">Your list is empty.</div>
+        <div class="results-grid">
+            <div v-for="movie in movies" :key="movie.id" class="movie-card">
+    <h3>{{ movie.title }}</h3>
+    <p>{{ movie.year }}</p>
+
+    <div class="actions">
+        <!-- Only show 'Move' if we are currently in the Watchlist view -->
+        <button v-if="type === 'watchlist'" @click="moveMovie(movie.id)">
+            ✅ Mark as Watched
+        </button>
+
+        <button @click="deleteMovie(movie.id)" class="btn-delete">
+            🗑️ Remove
+        </button>
+    </div>
+    <!-- Inside your v-for="movie in movies" -->
+<div v-if="type === 'library'" class="rating-section">
+    <p>Your Rating:</p>
+    <div class="stars">
+        <!-- Loop 1 to 5 -->
+        <span 
+            v-for="n in 5" 
+            :key="n"
+            @click="setRating(movie.id, n)"
+            :class="{ 'active-star': n <= movie.rating }"
+            style="cursor: pointer; font-size: 1.5rem;"
+        >
+            {{ n <= movie.rating ? '★' : '☆' }}
+        </span>
+    </div>
+</div>
+</div>
+            </div>
+        </div>
+    </div>
+</script>
+
+    <script type="text/x-template" id="list-template">
+    <div class="page">
+        <h1>{{ title }}</h1>
+        <div v-if="movies.length === 0">Your list is empty.</div>
+        <div class="results-grid">
+            <div v-for="movie in movies" :key="movie.id" class="movie-card">
+                <strong>{{ movie.title }}</strong> ({{ movie.year }})
+            </div>
+        </div>
+    </div>
+</script>
+
+    <script src="app.js"></script>
+</body>
+
+</html>

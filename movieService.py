@@ -1,172 +1,106 @@
 from flask import Blueprint, request, jsonify
+from sqlalchemy.exc import IntegrityError
 from extensions import db
 from models import Movie
 import requests
+import os
+
+
+
 
 # Blueprint for movie service
 movieService_bp = Blueprint("movieService", __name__)
 
 
 
-### ROUTE FOR OMBDb API - Fetch movie details by title ###
+### Proxy Route to GET Movie Data from OMDb API ###
 @movieService_bp.route("/search", methods=["GET"])
-def search_movies():
-    query = request.args.get("query")
+def proxy_search():
+    query = request.args.get('q')
     if not query:
-        return {"error": "Please provide a movie title"}, 400
+        return jsonify({"error": "No query provided"}), 400
     
+    # Talk to OMDb API
+    api_key = os.getenv("API_KEY") 
+    response = requests.get(f"https://www.omdbapi.com/?s={query}&apikey={api_key}")
 
-    # Parametri za OMDb API klic.
-    params = {
-        's': query,
-        'apikey': '37808c24'
-    }
-    url = "http://www.omdbapi.com/"
-
-
-    # Make the request to the OMDb API
-    response = requests.get(url, params=params)
-    if response.status_code != 200:
-        return {"error": "Failed to fetch data from OMDb API"}, 500
-    data = response.json()
-    if data.get("Response") == "False":
-        return {"error": data.get("Error", "Movie not found")}, 404
+    # Return in Json format to frontend
+    if response.status_code == 200:
+        return jsonify(response.json())
+    else:
+        return jsonify({"error": "Failed to fetch data from OMDb API"}), response.status_code
     
+  
 
-    # Tukaj dobimo vse rezultate iskanja, ki jih vrne OMDb API
-    raw_results = data.get("Search", [])
-
-    # Filtiramo podatke iz raw_results, samo tiste ki nas zanimajo
-    results = [
-        {
-            "title": movie.get("Title"),
-            "year": movie.get("Year"),
-            "poster_url": movie.get("Poster") if movie.get("Poster") != "N/A" else None,
-        }
-        for movie in raw_results
-    ]
-
-    return jsonify(results)
-
-
-
-### ROUTE FOR ADDING A MOVIE FROM SEARCH RESULTS ###
-@movieService_bp.route("/add", methods=["POST"])
+### Route to Add a Movie from Search Results ###
+@movieService_bp.route("/add", methods=["POST", "OPTIONS"])
 def add_movie_from_search():
+    if request.method == "OPTIONS":
+        return "", 204
     data = request.get_json()
     
     title_input = data.get("title", "").strip()
     year_input = data.get("year", "").strip()
+    status_input = data.get("status").strip().lower()
 
     if not title_input:
         return {"error": "Title is required"}, 400
 
+    if not status_input:
+        return {"error": "Status is required"}, 400
 
-    new_movie = Movie(title=title_input, year=year_input)
+    new_movie = Movie(title=title_input, year=year_input, status=status_input)
 
     try:
         db.session.add(new_movie)
         db.session.commit()
-        return jsonify({"message": "Added!"}), 201
+        return jsonify({"message": f"Added movie {new_movie.title} to {status_input}"}), 201
+    except IntegrityError:
+        db.session.rollback()
+        return {"error": "Movie with this title is already in the database"}, 400
     except Exception as e:
         db.session.rollback()
         return {"error": str(e)}, 500
 
 
 
-### GET METHOD - Retrieve all movies ###
+### Route to Get All Movies in the Database ###
 @movieService_bp.route("/", methods=["GET"])
-def get_movies():
-    # Query all movies from the database
-    all_movies = Movie.query.all()
-
-    # Convert SQLAlchemy objects into a list of dictionaries for JSON
-    results = [
-        {
-            "id": m.id,
-            "title": m.title,
-            "status": m.status,
-            "year": m.year,
-            "poster_url": m.poster_url,
-        }
-        for m in all_movies
-    ]
-    return jsonify(results)
+def get_all_movies():
+    movies = Movie.query.all()
+    movies_list = [{"id": m.id, "title": m.title, "status": m.status, "year": m.year, "poster_url": m.poster_url, "rating": m.rating} for m in movies]
+    return jsonify(movies_list)
 
 
 
-### POST METHOD - Add a new movie ###
-@movieService_bp.route("/", methods=["POST"])
-def add_movie():
+### Route to Update Movie Status ###
+@movieService_bp.route("/<int:movie_id>/status", methods=["PUT"])
+def update_status(movie_id):
     data = request.get_json()
-
-    if not data or "title" not in data:
-        return {"error": "Missing title"}, 400
-
-    # Create a new Movie instance
-    new_movie = Movie(
-        title=data.get("title"),
-        status=data.get("status", "want to watch"),
-        year=data.get("year"),
-        poster_url=data.get("poster_url"),
-    )
-
-    # Add to session and commit to save to the .db file
-    db.session.add(new_movie)
+    movie = Movie.query.get_or_404(movie_id)
+    
+    # We expect {'status': 'library'}
+    movie.status = data.get('status', movie.status)
     db.session.commit()
-
-    return jsonify(
-        {
-            "id": new_movie.id,
-            "title": new_movie.title,
-            "status": new_movie.status,
-            "year": new_movie.year,
-            "poster_url": new_movie.poster_url,
-        }
-    ), 201
+    return jsonify({"message": "Status updated!"})
 
 
 
-### PUT METHOD - Update an existing movie ###
-@movieService_bp.route("/<int:movie_id>", methods=["PUT"])
-def update_movie(movie_id):
-    data = request.get_json()
-
-    # Find the movie by primary key
-    movie = Movie.query.get(movie_id)
-
-    if not movie:
-        return {"error": "Movie not found"}, 404
-
-    # Update fields if they exist in the request
-    movie.title = data.get("title", movie.title)
-    movie.status = data.get("status", movie.status)
-    movie.year = data.get("year", movie.year)
-    movie.poster_url = data.get("poster_url", movie.poster_url)
-
-    db.session.commit()
-
-    return jsonify(
-        {
-            "id": movie.id,
-            "title": movie.title,
-            "status": movie.status,
-            "year": movie.year,
-            "poster_url": movie.poster_url,
-        }
-    )
-
-
-
-### DELETE METHOD - Remove a movie ###
+### Route to Delete a Movie from the library ###
 @movieService_bp.route("/<int:movie_id>", methods=["DELETE"])
 def delete_movie(movie_id):
-    movie = Movie.query.get(movie_id)
-
-    if not movie:
-        return {"error": "Movie not found"}, 404
-
+    movie = Movie.query.get_or_404(movie_id)
     db.session.delete(movie)
     db.session.commit()
+    return jsonify({"message": "Movie deleted!"})
 
-    return {"message": f"Movie {movie_id} deleted"}, 200
+
+
+### Route to Update Movie Rating ###
+@movieService_bp.route("/<int:movie_id>/rating", methods=["PATCH"])
+def update_rating(movie_id):
+    data = request.get_json()
+    movie = Movie.query.get_or_404(movie_id)
+    movie.rating = data.get('rating')
+    db.session.commit()
+    return jsonify({"message": "Rating updated"})
