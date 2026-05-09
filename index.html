@@ -1,98 +1,298 @@
 <!DOCTYPE html>
-<html>
-
+<html lang="en">
 <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>CineTrack Pro</title>
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
     <script src="https://unpkg.com/vue-router@4"></script>
-    <link rel="stylesheet" href="style.css">
+    <!-- Google Fonts for that premium feel -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --bg-color: #0f172a; /* Deep Midnight Blue */
+            --card-bg: #1e293b;
+            --accent: #38bdf8;   /* Electric Blue */
+            --text-main: #f8fafc;
+            --text-dim: #94a3b8;
+            --danger: #f43f5e;
+            --star-gold: #fbbf24;
+            --glass: rgba(15, 23, 42, 0.8);
+        }
+
+        body {
+            margin: 0;
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            min-height: 100vh;
+        }
+
+        /* --- Navigation --- */
+        .navbar {
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            display: flex;
+            justify-content: center;
+            gap: 2.5rem;
+            padding: 1.2rem;
+            background: var(--glass);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .navbar a {
+            color: var(--text-dim);
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 0.9rem;
+            letter-spacing: 0.5px;
+            transition: 0.3s;
+        }
+
+        .navbar a:hover, .navbar a.router-link-active {
+            color: var(--accent);
+            text-shadow: 0 0 15px rgba(56, 189, 248, 0.4);
+        }
+
+        /* --- Layout --- */
+        .page {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 3rem 2rem;
+        }
+
+        h1 {
+            font-size: 3rem;
+            font-weight: 800;
+            margin-bottom: 2rem;
+            letter-spacing: -1px;
+            background: linear-gradient(to bottom right, #fff, #64748b);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        /* --- Search Area --- */
+        .search-bar {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 4rem;
+            max-width: 600px;
+        }
+
+        input {
+            flex: 1;
+            padding: 1.2rem 1.5rem;
+            border-radius: 16px;
+            border: 1px solid #334155;
+            background: #1e293b;
+            color: white;
+            font-size: 1rem;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+
+        input:focus {
+            outline: none;
+            border-color: var(--accent);
+            box-shadow: 0 0 0 4px rgba(56, 189, 248, 0.15);
+        }
+
+        button {
+            padding: 0 2rem;
+            border-radius: 14px;
+            border: none;
+            cursor: pointer;
+            font-weight: 700;
+            background: var(--accent);
+            color: #0f172a;
+            transition: all 0.2s;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 15px -3px rgba(56, 189, 248, 0.3);
+        }
+
+        /* --- Movie Cards --- */
+        .results-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 2rem;
+        }
+
+        .movie-card {
+            background: var(--card-bg);
+            border-radius: 24px;
+            padding: 2rem;
+            border: 1px solid rgba(255, 255, 255, 0.03);
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            transition: 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        .movie-card:hover {
+            transform: translateY(-10px);
+            border-color: rgba(56, 189, 248, 0.3);
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3);
+        }
+
+        .movie-card strong {
+            font-size: 1.4rem;
+            display: block;
+            line-height: 1.2;
+            margin-bottom: 0.5rem;
+        }
+
+        .movie-year {
+            color: var(--text-dim);
+            font-weight: 400;
+        }
+
+        .actions {
+            margin-top: 2rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.8rem;
+        }
+
+        .actions button {
+            width: 100%;
+            padding: 0.8rem;
+        }
+
+        .secondary-btn {
+            background: rgba(255, 255, 255, 0.05);
+            color: white;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .secondary-btn:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .btn-delete {
+            background: transparent;
+            color: var(--danger);
+            border: 1px solid rgba(244, 63, 94, 0.2);
+            margin-top: 1rem;
+        }
+
+        .btn-delete:hover {
+            background: var(--danger);
+            color: white;
+            box-shadow: 0 10px 15px -3px rgba(244, 63, 94, 0.3);
+        }
+
+        /* --- Ratings & Notes --- */
+        .rating-section {
+            margin: 1.5rem 0;
+            text-align: center;
+        }
+
+        .stars {
+            font-size: 1.8rem;
+            letter-spacing: 5px;
+        }
+
+        .active-star {
+            color: var(--star-gold);
+            text-shadow: 0 0 12px rgba(251, 191, 36, 0.5);
+        }
+
+        .notes-box textarea {
+            width: 100%;
+            background: #0f172a;
+            border: 1px solid #334155;
+            border-radius: 12px;
+            color: var(--text-dim);
+            padding: 1rem;
+            resize: none;
+            font-family: inherit;
+        }
+    </style>
 </head>
 
 <body>
 
     <div id="app">
         <nav class="navbar">
-            <router-link title="Search" to="/">🔍 Search</router-link>
-            <router-link title="Watchlist" to="/watchlist">⏳ Watchlist</router-link>
-            <router-link title="Library" to="/library">✅ Library</router-link>
+            <router-link to="/">SEARCH</router-link>
+            <router-link to="/watchlist">WATCHLIST</router-link>
+            <router-link to="/library">LIBRARY</router-link>
         </nav>
 
         <router-view></router-view>
     </div>
 
+    <!-- SEARCH PAGE TEMPLATE -->
     <script type="text/x-template" id="search-template">
     <div class="page">
-        <h1>Movie Search</h1>
+        <h1>Find your next <br><span style="color:var(--accent)">obsession.</span></h1>
         <div class="search-bar">
-            <input v-model="query" @keyup.enter="search" placeholder="Search for movies...">
+            <input v-model="query" @keyup.enter="search" placeholder="Enter movie title...">
             <button @click="search">Search</button>
         </div>
         <div class="results-grid">
-            <div v-for="movie in results" :key="movie.imdbID" class="movie-card" @click="add(movie)">
-                <strong>{{ movie.Title }}</strong> <span>({{ movie.Year }})</span>
+            <div v-for="movie in results" :key="movie.imdbID" class="movie-card">
+                <div>
+                    <strong>{{ movie.Title }}</strong> 
+                    <span class="movie-year">{{ movie.Year }}</span>
+                </div>
                 <div class="actions">
                     <button @click="add(movie, 'Watchlist')">Add to Watchlist</button>
-                    <button @click="add(movie, 'Library')">I've Seen This</button>
+                    <button class="secondary-btn" @click="add(movie, 'Library')">I've Seen This</button>
                 </div>
             </div>
         </div>
     </div>
-</script>
+    </script>
 
+    <!-- LIST PAGE TEMPLATE (Watchlist/Library) -->
     <script type="text/x-template" id="list-template">
     <div class="page">
         <h1>{{ title }}</h1>
-        <div v-if="movies.length === 0">Your list is empty.</div>
+        <div v-if="movies.length === 0" style="color: var(--text-dim); font-size: 1.2rem;">
+            Your collection looks a bit lonely...
+        </div>
+        
         <div class="results-grid">
             <div v-for="movie in movies" :key="movie.id" class="movie-card">
-    <h3>{{ movie.title }}</h3>
-    <p>{{ movie.year }}</p>
+                <div>
+                    <strong>{{ movie.title }}</strong>
+                    <p class="movie-year">{{ movie.year }}</p>
 
-    <div class="actions">
-        <!-- Only show 'Move' if we are currently in the Watchlist view -->
-        <button v-if="type === 'watchlist'" @click="moveMovie(movie.id)">
-            ✅ Mark as Watched
-        </button>
+                    <!-- Library Specific Features -->
+                    <div v-if="type === 'library'">
+                        <div class="rating-section">
+                            <div class="stars">
+                                <span v-for="n in 5" :key="n" @click="setRating(movie.id, n)"
+                                    :class="{ 'active-star': n <= movie.rating }" style="cursor: pointer;">
+                                    {{ n <= movie.rating ? '★' : '☆' }}
+                                </span>
+                            </div>
+                        </div>
+                        <div class="notes-box">
+                            <textarea v-model="movie.note" placeholder="Write a quick review..." @blur="saveNote(movie)"></textarea>
+                        </div>
+                    </div>
+                </div>
 
-        <button @click="deleteMovie(movie.id)" class="btn-delete">
-            🗑️ Remove
-        </button>
-    </div>
-    <!-- Inside your v-for="movie in movies" -->
-<div v-if="type === 'library'" class="rating-section">
-    <p>Your Rating:</p>
-    <div class="stars">
-        <!-- Loop 1 to 5 -->
-        <span 
-            v-for="n in 5" 
-            :key="n"
-            @click="setRating(movie.id, n)"
-            :class="{ 'active-star': n <= movie.rating }"
-            style="cursor: pointer; font-size: 1.5rem;"
-        >
-            {{ n <= movie.rating ? '★' : '☆' }}
-        </span>
-    </div>
-</div>
-</div>
+                <div class="actions">
+                    <button v-if="type === 'watchlist'" @click="moveMovie(movie.id)">
+                        ✅ Mark as Watched
+                    </button>
+                    <button @click="deleteMovie(movie.id)" class="btn-delete">
+                        Remove
+                    </button>
+                </div>
             </div>
         </div>
     </div>
-</script>
-
-    <script type="text/x-template" id="list-template">
-    <div class="page">
-        <h1>{{ title }}</h1>
-        <div v-if="movies.length === 0">Your list is empty.</div>
-        <div class="results-grid">
-            <div v-for="movie in movies" :key="movie.id" class="movie-card">
-                <strong>{{ movie.title }}</strong> ({{ movie.year }})
-            </div>
-        </div>
-    </div>
-</script>
+    </script>
 
     <script src="app.js"></script>
 </body>
-
 </html>
