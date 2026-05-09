@@ -1,8 +1,9 @@
 from flask import Flask
 from flask_cors import CORS
-from extensions import db
-from models import Movie  # Import models so SQLAlchemy "sees" the tables
+from extensions import db, mongo
+from models import Movie
 from movieService import movieService_bp
+from reviewService import review_bp
 from dotenv import load_dotenv
 
 # # Load environment variables from .env file
@@ -11,12 +12,16 @@ load_dotenv()
 # Create Flash app
 def create_app():
     app = Flask(__name__)
-    CORS(app)   # unlocks the door for your frontend to communicate with the backend (allows cross-origin requests)
 
 
-    # Database configuration
+    # SQL Database configuration
     app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///movies.db'   # Povemo, da bomo uporabljal SQLite bazo z imenom movies.db
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False            # Izklopimo sledenje spremembam, ker ni potrebno in lahko povzroči dodatno porabo pomnilnika
+
+
+    # MongoDB configuration
+    app.config["MONGO_URI"] = "mongodb://localhost:27017/movieDB"
+    mongo.init_app(app)
 
 
     # Povežemo SQLAlchemy z našo Flask aplikacijo (db objekt je it extensions.py)
@@ -25,9 +30,13 @@ def create_app():
 
     # Register Blueprints
     app.register_blueprint(movieService_bp, url_prefix='/movies')
+    app.register_blueprint(review_bp, url_prefix='/api/reviews')
 
+    # Enable CORS for the app - omogoča, da lahko frontend komunicira z backend 
+    CORS(app)
 
-    # Home route (homepage)
+    
+    # Homepage route
     @app.route("/")
     def home():
         return """
@@ -37,14 +46,16 @@ def create_app():
             Go to Movies
         </button>
         """
-
-    # Create tables (ko se aplikacija zažene, preverimo, če tabele obstajajo, če ne, jih ustvarimo)
-    with app.app_context():
-        db.create_all()
         
     return app
 
 
+# Run the app    
 if __name__ == "__main__":
     app = create_app()
     app.run(debug=True)
+
+    with app.app_context():
+        print("Checking if SQL tables exist...")
+        db.create_all()  # This creates the movies.db file and all tables defined in models.py
+        print("SQL Tables verified!")

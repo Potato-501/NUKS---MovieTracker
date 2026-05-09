@@ -1,5 +1,6 @@
 from extensions import db
 
+# SQL model za tabelo Movie - predstavlja strukturo tabele v SQL bazi, ki bo shranjevala informacije o filmih
 class Movie(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     title = db.Column(db.String(100), nullable=False, unique=True)

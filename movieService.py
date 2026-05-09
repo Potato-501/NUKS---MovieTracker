@@ -6,9 +6,7 @@ import requests
 import os
 
 
-
-
-# Blueprint for movie service
+# Blueprint for movie service - vsa ta koda se potem inicializira v main.py
 movieService_bp = Blueprint("movieService", __name__)
 
 
@@ -41,7 +39,7 @@ def add_movie_from_search():
     
     title_input = data.get("title", "").strip()
     year_input = data.get("year", "").strip()
-    status_input = data.get("status").strip().lower()
+    status_input = data.get("status" or "watchlist").strip().lower()
 
     if not title_input:
         return {"error": "Title is required"}, 400

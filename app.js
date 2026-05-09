@@ -46,6 +46,13 @@ const ListPage = {
             const res = await fetch('http://127.0.0.1:5000/movies/');
             const allMovies = await res.json();
             this.movies = allMovies.filter(m => m.status === this.type);
+
+            // če smo v library, naloži tudi review za vsak film
+            if(this.type == 'library') {
+                this.movies.forEach(movie => {
+                    this.loadNotes(movie); // Load notes for each movie in library
+                });
+            }
         },
 
         // metoda za premikanje filma iz watchlista v library
@@ -92,9 +99,46 @@ const ListPage = {
             catch (e) {
                 alert("Error setting rating: " + e.message);
             }
+        },
+
+        // metoda za nalaganje written notes iz MongoDB-ja za določen film
+        async loadNotes(movie) {
+            try {
+                console.log("Loading note for movie", movie.id);
+                const res = await fetch(`http://127.0.0.1:5000/api/reviews/${movie.id}`);
+                const data = await res.json();
+                movie.note = data.note;
+            }
+            catch (e) {
+                alert("Error loading note: " + e.message);
+            }
+        },
+
+        // metoda za shranjevanje written notes v MongoDB-ju za določen film
+        async saveNote(movie) {
+            try {
+                console.log("Saving note for movie", movie.id, movie.note);
+                const res = await fetch(`http://127.0.0.1:5000/api/reviews/${movie.id}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ note: movie.note })
+                });
+                if (res.ok) {
+                    alert("Note saved to MongoDB!");
+                } else {
+                    let text;
+                    try { text = await res.text(); } catch (e) { text = String(e); }
+                    console.error("Save note failed, response:", res.status, text);
+                    alert("Error saving note: " + (text || res.status));
+                }
+            }
+            catch (e) {
+                console.error("Fetch error while saving note:", e);
+                alert("Error saving note: " + e.message);
+            }
         }
     }
-}
+};
 
 // --- ROUTER ---
 const routes = [
