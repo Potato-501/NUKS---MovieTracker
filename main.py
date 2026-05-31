@@ -1,52 +1,43 @@
-from flask import Flask
+from flask import Flask, send_from_directory
 from flask_cors import CORS
 from extensions import db, mongo
-from models import Movie
 from movieService import movieService_bp
 from reviewService import review_bp
+from authService import auth_bp
 from dotenv import load_dotenv
+import os
 
 # # Load environment variables from .env file
 load_dotenv()
 
 # Create Flash app
 def create_app():
-    app = Flask(__name__)
+    app = Flask(__name__, static_folder=".", static_url_path="")
+    app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'dev-secret-change-me')
+    app.config['SESSION_COOKIE_HTTPONLY'] = True
+    app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
 
+    app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL', 'sqlite:///movies.db')
+    app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
-    # SQL Database configuration
-    app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///movies.db'   # Povemo, da bomo uporabljal SQLite bazo z imenom movies.db
-    app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False            # Izklopimo sledenje spremembam, ker ni potrebno in lahko povzroči dodatno porabo pomnilnika
-
-
-    # MongoDB configuration
     app.config["MONGO_URI"] = "mongodb://localhost:27017/movieDB"
     mongo.init_app(app)
 
+    db.init_app(app)
 
-    # Povežemo SQLAlchemy z našo Flask aplikacijo (db objekt je it extensions.py)
-    db.init_app(app)    
-
-
-    # Register Blueprints
     app.register_blueprint(movieService_bp, url_prefix='/movies')
     app.register_blueprint(review_bp, url_prefix='/api/reviews')
+    app.register_blueprint(auth_bp)
 
-    # Enable CORS for the app - omogoča, da lahko frontend komunicira z backend 
-    CORS(app)
+    CORS(app, supports_credentials=True)
 
-    
-    # Homepage route
+    with app.app_context():
+        db.create_all()
+
     @app.route("/")
     def home():
-        return """
-        <h1>Movie Tracker</h1>
-        <p>Movie tracker is up and operational!</p>
-        <button onclick="location.href='/movies'" style="padding: 10px 20px; font-size: 16px; cursor: pointer;">
-            Go to Movies
-        </button>
-        """
-        
+        return send_from_directory(app.static_folder, 'index.html')
+
     return app
 
 
@@ -54,8 +45,3 @@ def create_app():
 if __name__ == "__main__":
     app = create_app()
     app.run(debug=True)
-
-    with app.app_context():
-        print("Checking if SQL tables exist...")
-        db.create_all()  # This creates the movies.db file and all tables defined in models.py
-        print("SQL Tables verified!")
