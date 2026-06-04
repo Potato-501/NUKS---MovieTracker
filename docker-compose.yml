@@ -1,0 +1,57 @@
+version: '3.8'
+
+services:
+  nginx:
+    image: nginx:latest
+    container_name: moviekite-nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - app
+    networks:
+      - app-network
+    restart: unless-stopped
+
+  app:
+    build: .
+    container_name: moviekite-app
+    ports:
+      - "5000:5000"
+    environment:
+      ENV: production
+      SECRET_KEY: ${SECRET_KEY:-docker-dev-key-change-in-prod}
+      MONGO_URI: mongodb://mongo:27017/movieDB
+      DATABASE_URL: ${DATABASE_URL:-sqlite:///movies.db}
+      minio_endpoint: ${minio_endpoint:-http://212.235.185.13:9000}
+      minio_access_key: ${minio_access_key:-minioadmin}
+      minio_secret_key: ${minio_secret_key:-minioadmin}
+      MINIO_BUCKET: ${MINIO_BUCKET:-user-05}
+      API_KEY: ${API_KEY:-dev-key}
+    depends_on:
+      - mongo
+    networks:
+      - app-network
+    restart: unless-stopped
+
+  mongo:
+    image: mongo:7.0
+    container_name: moviekite-mongo
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_DATABASE: movieDB
+    volumes:
+      - mongo_data:/data/db
+    networks:
+      - app-network
+    restart: unless-stopped
+
+volumes:
+  mongo_data:
+
+networks:
+  app-network:
+    driver: bridge
