@@ -20,7 +20,7 @@ def create_app():
     app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL', 'sqlite:///movies.db')
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
-    app.config["MONGO_URI"] = "mongodb://localhost:27017/movieDB"
+    app.config["MONGO_URI"] = os.getenv('MONGO_URI', 'mongodb://localhost:27017/movieDB')
     mongo.init_app(app)
 
     db.init_app(app)
