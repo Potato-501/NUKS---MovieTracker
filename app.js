@@ -5,7 +5,7 @@ const API_BASE = (() => {
     }
 
     // If frontend is not served by Flask backend, default API calls to local Flask server.
-    if (window.location.protocol === 'file:' || window.location.port !== '5000') {
+    if (window.location.protocol === 'file:') {
         return 'http://127.0.0.1:5000';
     }
 
